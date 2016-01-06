@@ -111,6 +111,7 @@ func NewRedisAdapter(route *router.Route) (router.LogAdapter, error) {
 func (a *RedisAdapter) Stream(logstream chan *router.Message) {
 	conn := a.pool.Get()
 	if os.Getenv("DEBUG") != "" {
+		log.Println("Got redis connection from pool")
 		defer log.Println("Handing redis connection back to pool")
 	}
 	defer conn.Close()
@@ -132,7 +133,8 @@ func (a *RedisAdapter) Stream(logstream chan *router.Message) {
 		}
 		_, err = conn.Do("RPUSH", a.key, js)
 		if err != nil {
-			log.Println("redis: error on rpush (muting until restored):", err)
+			log.Println("redis: error on rpush, closing connection:", err)
+			conn.Close()
 			continue
 		}
 		mute = false
