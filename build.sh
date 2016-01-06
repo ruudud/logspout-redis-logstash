@@ -1,5 +1,5 @@
 #!/bin/sh
-cat > ./Dockerfile.example <<DOCKERFILE
+cat > ./Dockerfile <<DOCKERFILE
 FROM gliderlabs/logspout:master
 DOCKERFILE
 
@@ -11,7 +11,3 @@ import (
   _ "github.com/rtoma/logspout-redis-logstash"
 )
 MODULES
-
-docker build -t rtoma/logspout-redis-logstash -f Dockerfile.example .
-
-rm -f Dockerfile.example modules.go
