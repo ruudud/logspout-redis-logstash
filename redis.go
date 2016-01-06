@@ -110,6 +110,9 @@ func NewRedisAdapter(route *router.Route) (router.LogAdapter, error) {
 
 func (a *RedisAdapter) Stream(logstream chan *router.Message) {
 	conn := a.pool.Get()
+	if os.Getenv("DEBUG") != "" {
+		defer log.Println("Handing redis connection back to pool")
+	}
 	defer conn.Close()
 
 	mute := false
@@ -134,6 +137,7 @@ func (a *RedisAdapter) Stream(logstream chan *router.Message) {
 		}
 		mute = false
 	}
+	log.Println("Done iterator logstream")
 }
 
 func errorf(format string, a ...interface{}) (err error) {
