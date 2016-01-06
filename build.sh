@@ -1,8 +1,4 @@
 #!/bin/sh
-cat > ./Dockerfile <<DOCKERFILE
-FROM gliderlabs/logspout:master
-DOCKERFILE
-
 cat > ./modules.go <<MODULES
 package main
 import (
