@@ -109,37 +109,38 @@ func NewRedisAdapter(route *router.Route) (router.LogAdapter, error) {
 }
 
 func (a *RedisAdapter) Stream(logstream chan *router.Message) {
-	conn := a.pool.Get()
-	if os.Getenv("DEBUG") != "" {
-		log.Println("Got redis connection from pool")
-		defer log.Println("Handing redis connection back to pool")
-	}
-	defer conn.Close()
-
-	mute := false
-
-	for m := range logstream {
-		msg := createLogstashMessage(m, a.docker_host, a.use_v0)
-		js, err := json.Marshal(msg)
+	for {
+		conn := a.pool.Get()
 		if os.Getenv("DEBUG") != "" {
-			log.Println("Message received:", js)
+			log.Println("Got redis connection from pool")
+			defer log.Println("Handing redis connection back to pool")
 		}
-		if err != nil {
-			if !mute {
-				log.Println("redis: error on json.Marshal (muting until restored):", err)
-				mute = true
+		defer conn.Close()
+		mute := false
+
+	ReceiveLoop:
+		for m := range logstream {
+			msg := createLogstashMessage(m, a.docker_host, a.use_v0)
+			js, err := json.Marshal(msg)
+			if err != nil {
+				if !mute {
+					log.Println("redis: error on json.Marshal (muting until restored):", err)
+					mute = true
+				}
+				continue
 			}
-			continue
+			if os.Getenv("DEBUG") != "" {
+				log.Println("Message received, pushing to redis")
+			}
+			_, err = conn.Do("RPUSH", a.key, js)
+			if err != nil {
+				log.Println("redis: error on rpush, closing connection:", err)
+				conn.Close()
+				break ReceiveLoop
+			}
+			mute = false
 		}
-		_, err = conn.Do("RPUSH", a.key, js)
-		if err != nil {
-			log.Println("redis: error on rpush, closing connection:", err)
-			conn.Close()
-			continue
-		}
-		mute = false
 	}
-	log.Println("Done iterator logstream")
 }
 
 func errorf(format string, a ...interface{}) (err error) {
